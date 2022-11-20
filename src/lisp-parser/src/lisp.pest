@@ -1,0 +1,25 @@
+// File = {expression / ws+ }
+// FunctionCall = { "(" ws* name ws*
+//   {expression ws* {expression ws*}*}? ")"
+// expression = FunctionCall / Variable / Number
+//   / Text / "(" ws* expression ws* ")" }
+// Variable = { name }
+// Number = { [0-9]+ }
+// Text = { '"' ('\"' / '\\' / [^"])* '"' }
+// name = { [a-zA-Z]+ }
+// ws = { [ \n\t] }
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+NUMBER = @{
+    "-"?
+    ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*)
+    ~ ("." ~ ASCII_DIGIT*)?
+    ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
+}
+OPERATOR = { "+" | "-" | "*" | "/" }
+EXPR = { NUMBER | "(" ~ OPERATOR ~ EXPR+ ~ ")" }
+SAUCY = { 
+  SOI
+    ~ (OPERATOR ~ EXPR+)
+    ~ EOI
+  }

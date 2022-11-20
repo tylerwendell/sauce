@@ -1,0 +1,1 @@
+/Users/tylerwendell/Projects/Rust/sauce/src/lisp-parser/target/debug/lisp-parser: /Users/tylerwendell/Projects/Rust/sauce/src/lisp-parser/src/lisp.pest /Users/tylerwendell/Projects/Rust/sauce/src/lisp-parser/src/main.rs
