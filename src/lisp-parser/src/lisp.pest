@@ -10,16 +10,16 @@
 // ws = { [ \n\t] }
 
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
-NUMBER = @{
+number = @{
     "-"?
     ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*)
     ~ ("." ~ ASCII_DIGIT*)?
     ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
 }
-OPERATOR = { "+" | "-" | "*" | "/" }
-EXPR = { NUMBER | "(" ~ OPERATOR ~ EXPR+ ~ ")" }
+operator = { "+" | "-" | "*" | "/" }
+expr = { number | "(" ~ operator ~ expr+ ~ ")" }
 SAUCY = { 
   SOI
-    ~ (OPERATOR ~ EXPR+)
+    ~ (operator ~ expr+)
     ~ EOI
   }

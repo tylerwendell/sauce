@@ -4,3 +4,12 @@ this is
 a function
 the end
 q
+This is a test
+How do I multi-line? 
+I am not sure
+q
+a
+as
+test
+test this
+q
