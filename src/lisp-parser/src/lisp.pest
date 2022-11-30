@@ -17,9 +17,10 @@ number = @{
     ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
 }
 operator = { "+" | "-" | "*" | "/" }
-expr = { number | "(" ~ operator ~ expr+ ~ ")" }
+expr = { number | "(" ~ function ~ ")" }
+function = {operator ~ expr+}
 SAUCY = { 
   SOI
-    ~ (operator ~ expr+)
+    ~ function
     ~ EOI
   }

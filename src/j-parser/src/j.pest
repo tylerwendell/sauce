@@ -1,0 +1,33 @@
+program = _{ SOI ~ "\n"* ~ (stmt ~ "\n"+) * ~ stmt? ~ EOI }
+
+stmt = _{ expr }
+
+expr = {
+    string
+    | terms  
+    | assgmtExpr
+    | monadicExpr 
+}
+
+monadicExpr = { verb ~ expr }
+
+assgmtExpr = { ident ~ "=:" ~ expr }
+
+verb = {
+    ">" | ">=" | "*" | "-"  | "/"
+  | "+"  | "*"  | "<"  |  "<="  | "==" | "^" | "|" | "&"
+}
+
+terms = { term+ }
+
+term = _{ decimal | integer | ident |  "(" ~ expr ~ ")" }
+
+decimal = @{ "_"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
+
+integer = @{ "_"? ~ ASCII_DIGIT+ }
+
+ident = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+
+string = @{ "'" ~ ( "''" | (!"'" ~ ANY) )* ~ "'" }
+
+WHITESPACE = _{ " " | "\t" }
