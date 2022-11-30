@@ -1,92 +1,172 @@
-
 extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 
-use pest::Parser;
+use self::AstNode::*;
 use pest::error::Error;
+use pest::Parser;
+use std::ffi::CString;
 
 #[derive(Parser)]
 #[grammar = "lisp.pest"]
 pub struct LISPParser;
 
-fn main() {
-    let successful_parse = LISPParser::parse(Rule::SAUCY, "+ 10 14");
-    // println!("{:?}", successful_parse);
-
-    let lisp = parse_json_file("+ 3 4").expect("unsuccessful parse");
-    println!("{:?}", lisp)
-
-    // let unsuccessful_parse = LISPParser::parse(Rule::SAUCY, "this is not lisp");
-    // println!("{:?}", unsuccessful_parse);
-}
-
 #[derive(PartialEq, Eq, Debug, Clone)]
-pub enum OperatorVerb {
-    Sum,
-    Difference,
+pub enum MonadicVerb {
+    GreaterThan,
+    GreaterThanEqual,
     Multiplication,
+    Difference,
+    Addition,
     Division,
+    Tally,
+    LessThan,
+    LessThanEqual,
+    Equivalency,
+    NotEquivalent,
+    Power,
+    Or,
+    And,
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub enum LispAst {
-    Number(f64),
-    Operator(OperatorVerb),
-    Expr(Vec<LispAst>),
-    Function{
-        operator: OperatorVerb,
-        number: Vec<LispAst>
+pub enum AstNode {
+    Print(Box<AstNode>),
+    Integer(i32),
+    DoublePrecisionFloat(f64),
+    MonadicOp {
+        operator: MonadicVerb,
+        expr: Box<AstNode>,
     },
+    Terms(Vec<AstNode>),
+    IsGlobal {
+        ident: String,
+        expr: Box<AstNode>,
+    },
+    Ident(String),
+    Str(CString),
 }
 
-
-fn parse_json_file(input: &str) -> Result<Vec<LispAst>, Error<Rule>> {
-    use pest::iterators::Pair;
+pub fn parse(source: &str) -> Result<Vec<AstNode>, Error<Rule>> {
     let mut ast = vec![];
 
-    let parse = LISPParser::parse(Rule::SAUCY, input);
-    for pair in parse {
+    let pairs = LISPParser::parse(Rule::lisp, source)?;
+    for pair in pairs {
         match pair.as_rule() {
-            Rule::function => {
-                ast.push(Print(Box::new(parse_value(pair))));
+            Rule::expr => {
+                ast.push(Print(Box::new(build_ast_from_expr(pair))));
             }
             _ => {}
         }
-        ast.push(parse_value(pair));
-    }
-    fn parse_value(pair: Pair<Rule>) -> LispAst {
-            println!("PAIR: {}", pair);
-            // println!("PAIR AS RULE: {}", pair.as_rule());
-            match pair.as_rule() {
-                Rule::function => LispAst::Function{
-                    operator: Operator(match pair.as_str() {
-                        "+" => OperatorVerb::Sum,
-                        "*" => OperatorVerb::Multiplication,
-                        "-" => OperatorVerb::Difference,
-                        "/" => OperatorVerb::Division,
-                        _ => panic!("Unsupported monadic verb: {}", pair.as_str()),
-                   }),
-                   
-                },
-                Rule::operator => parse_operator(pair.into_inner().next().unwrap()),
-                Rule::expr => parse_value(pair.into_inner().next().unwrap()),
-                Rule::number => LispAst::Number(pair.as_str().parse().unwrap()),
-                Rule::SAUCY
-                | Rule::EOI
-                | Rule::WHITESPACE => unreachable!(),
-            }
     }
 
     Ok(ast)
 }
 
-fn parse_operator(pair: pest::iterators::Pair<Rule>) -> LispAst {
-    LispAst::Operator(match pair.as_str() {
-            "+" => OperatorVerb::Sum,
-            "*" => OperatorVerb::Multiplication,
-            "-" => OperatorVerb::Difference,
-            "/" => OperatorVerb::Division,
-            _ => panic!("Unsupported monadic verb: {}", pair.as_str()),
-       })
+fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
+    match pair.as_rule() {
+        Rule::expr => build_ast_from_expr(pair.into_inner().next().unwrap()),
+        Rule::monadicExpr => {
+            let mut pair = pair.into_inner();
+            let operator = pair.next().unwrap();
+            let expr = pair.next().unwrap();
+            let expr = build_ast_from_expr(expr);
+            parse_monadic_verb(operator, expr)
+        }
+        Rule::terms => {
+            let terms: Vec<AstNode> = pair.into_inner().map(build_ast_from_term).collect();
+            // If there's just a single term, return it without
+            // wrapping it in a Terms node.
+            match terms.len() {
+                1 => terms.get(0).unwrap().clone(),
+                _ => Terms(terms),
+            }
+        }
+        Rule::assgmtExpr => {
+            let mut pair = pair.into_inner();
+            let ident = pair.next().unwrap();
+            let expr = pair.next().unwrap();
+            let expr = build_ast_from_expr(expr);
+            AstNode::IsGlobal {
+                ident: String::from(ident.as_str()),
+                expr: Box::new(expr),
+            }
+        }
+        unknown_expr => panic!("Unexpected expression: {:?}", unknown_expr),
+    }
 }
+
+
+fn parse_monadic_verb(pair: pest::iterators::Pair<Rule>, expr: AstNode) -> AstNode {
+    AstNode::MonadicOp {
+        operator: match pair.as_str() {
+            ">" => MonadicVerb::GreaterThan,
+            ">=" => MonadicVerb::GreaterThanEqual,
+            "*" => MonadicVerb::Multiplication,
+            "-" => MonadicVerb::Difference,
+            "+" => MonadicVerb::Addition,
+            "/" => MonadicVerb::Division,
+            "#" => MonadicVerb::Tally,
+            "<" => MonadicVerb::LessThan,
+            "<=" => MonadicVerb::LessThan,
+            "==" => MonadicVerb::Equivalency,
+            "!=" => MonadicVerb::NotEquivalent,
+            "^" => MonadicVerb::Power,
+            "|" =>MonadicVerb::Or,
+            "&" =>MonadicVerb::And,
+            _ => panic!("Unsupported monadic operator: {}", pair.as_str()),
+        },
+        expr: Box::new(expr),
+    }
+}
+
+fn build_ast_from_term(pair: pest::iterators::Pair<Rule>) -> AstNode {
+    match pair.as_rule() {
+        Rule::integer => {
+            let istr = pair.as_str();
+            let (sign, istr) = match &istr[..1] {
+                "_" => (-1, &istr[1..]),
+                _ => (1, &istr[..]),
+            };
+            let integer: i32 = istr.parse().unwrap();
+            AstNode::Integer(sign * integer)
+        }
+        Rule::decimal => {
+            let dstr = pair.as_str();
+            let (sign, dstr) = match &dstr[..1] {
+                "_" => (-1.0, &dstr[1..]),
+                _ => (1.0, &dstr[..]),
+            };
+            let mut flt: f64 = dstr.parse().unwrap();
+            if flt != 0.0 {
+                // Avoid negative zeroes; only multiply sign by nonzeroes.
+                flt *= sign;
+            }
+            AstNode::DoublePrecisionFloat(flt)
+        }
+        Rule::expr => build_ast_from_expr(pair),
+        Rule::ident => AstNode::Ident(String::from(pair.as_str())),
+        Rule::string => {
+            let str = &pair.as_str();
+            // Strip leading and ending quotes.
+            let str = &str[1..str.len() - 1];
+            // Escaped string quotes become single quotes here.
+            let str = str.replace("''", "'");
+            AstNode::Str(CString::new(&str[..]).unwrap())
+        }
+        unknown_term => panic!("Unexpected term: {:?}", unknown_term),
+    }
+}
+
+fn main() {
+    // let unparsed_file = std::fs::read_to_string("+ 1 2").expect("cannot read ijs file");
+    let astnode = parse("+ 5 (* 2 2)").expect("unsuccessful parse");
+    println!("{:?}", &astnode);
+
+    let astnode = parse("m:=5").expect("unsuccessful parse");
+    println!("{:?}", &astnode);
+
+    let astnode = parse("a:='Apple'").expect("unsuccessful parse");
+    println!("{:?}", &astnode);
+}
+

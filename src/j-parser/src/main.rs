@@ -11,7 +11,6 @@ use std::ffi::CString;
 #[grammar = "j.pest"]
 pub struct JParser;
 
-
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum MonadicVerb {
     GreaterThan,
@@ -35,14 +34,9 @@ pub enum AstNode {
     Integer(i32),
     DoublePrecisionFloat(f64),
     MonadicOp {
-        verb: MonadicVerb,
+        operator: MonadicVerb,
         expr: Box<AstNode>,
     },
-    // DyadicOp {
-    //     verb: DyadicVerb,
-    //     lhs: Box<AstNode>,
-    //     rhs: Box<AstNode>,
-    // },
     Terms(Vec<AstNode>),
     IsGlobal {
         ident: String,
@@ -55,9 +49,8 @@ pub enum AstNode {
 pub fn parse(source: &str) -> Result<Vec<AstNode>, Error<Rule>> {
     let mut ast = vec![];
 
-    let pairs = JParser::parse(Rule::program, source)?;
+    let pairs = JParser::parse(Rule::lisp, source)?;
     for pair in pairs {
-        println!("Pair: {}", pair);
         match pair.as_rule() {
             Rule::expr => {
                 ast.push(Print(Box::new(build_ast_from_expr(pair))));
@@ -70,28 +63,16 @@ pub fn parse(source: &str) -> Result<Vec<AstNode>, Error<Rule>> {
 }
 
 fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
-    println!("Pair: {}", pair);
     match pair.as_rule() {
         Rule::expr => build_ast_from_expr(pair.into_inner().next().unwrap()),
         Rule::monadicExpr => {
-            println!("monadic");
             let mut pair = pair.into_inner();
-            let verb = pair.next().unwrap();
+            let operator = pair.next().unwrap();
             let expr = pair.next().unwrap();
             let expr = build_ast_from_expr(expr);
-            parse_monadic_verb(verb, expr)
+            parse_monadic_verb(operator, expr)
         }
-        // Rule::dyadicExpr => {
-        //     let mut pair = pair.into_inner();
-        //     let lhspair = pair.next().unwrap();
-        //     let lhs = build_ast_from_expr(lhspair);
-        //     let verb = pair.next().unwrap();
-        //     let rhspair = pair.next().unwrap();
-        //     let rhs = build_ast_from_expr(rhspair);
-        //     parse_dyadic_verb(verb, lhs, rhs)
-        // }
         Rule::terms => {
-            println!("term");
             let terms: Vec<AstNode> = pair.into_inner().map(build_ast_from_term).collect();
             // If there's just a single term, return it without
             // wrapping it in a Terms node.
@@ -101,7 +82,6 @@ fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
             }
         }
         Rule::assgmtExpr => {
-            println!("assignment");
             let mut pair = pair.into_inner();
             let ident = pair.next().unwrap();
             let expr = pair.next().unwrap();
@@ -111,45 +91,14 @@ fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
                 expr: Box::new(expr),
             }
         }
-        Rule::string => {
-            println!("string");
-            let str = &pair.as_str();
-            // Strip leading and ending quotes.
-            let str = &str[1..str.len() - 1];
-            // Escaped string quotes become single quotes here.
-            let str = str.replace("''", "'");
-            AstNode::Str(CString::new(&str[..]).unwrap())
-        }
         unknown_expr => panic!("Unexpected expression: {:?}", unknown_expr),
     }
 }
 
-// fn parse_dyadic_verb(pair: pest::iterators::Pair<Rule>, lhs: AstNode, rhs: AstNode) -> AstNode {
-//     AstNode::DyadicOp {
-//         lhs: Box::new(lhs),
-//         rhs: Box::new(rhs),
-//         verb: match pair.as_str() {
-//             "+" => DyadicVerb::Plus,
-//             "*" => DyadicVerb::Times,
-//             "-" => DyadicVerb::Minus,
-//             "<" => DyadicVerb::LessThan,
-//             "=" => DyadicVerb::Equal,
-//             ">" => DyadicVerb::LargerThan,
-//             "%" => DyadicVerb::Divide,
-//             "^" => DyadicVerb::Power,
-//             "|" => DyadicVerb::Residue,
-//             "#" => DyadicVerb::Copy,
-//             ">." => DyadicVerb::LargerOf,
-//             ">:" => DyadicVerb::LargerOrEqual,
-//             "$" => DyadicVerb::Shape,
-//             _ => panic!("Unexpected dyadic verb: {}", pair.as_str()),
-//         },
-//     }
-// }
 
 fn parse_monadic_verb(pair: pest::iterators::Pair<Rule>, expr: AstNode) -> AstNode {
     AstNode::MonadicOp {
-        verb: match pair.as_str() {
+        operator: match pair.as_str() {
             ">" => MonadicVerb::GreaterThan,
             ">=" => MonadicVerb::GreaterThanEqual,
             "*" => MonadicVerb::Multiplication,
@@ -163,7 +112,7 @@ fn parse_monadic_verb(pair: pest::iterators::Pair<Rule>, expr: AstNode) -> AstNo
             "^" => MonadicVerb::Power,
             "|" =>MonadicVerb::Or,
             "&" =>MonadicVerb::And,
-            _ => panic!("Unsupported monadic verb: {}", pair.as_str()),
+            _ => panic!("Unsupported monadic operator: {}", pair.as_str()),
         },
         expr: Box::new(expr),
     }
@@ -194,23 +143,28 @@ fn build_ast_from_term(pair: pest::iterators::Pair<Rule>) -> AstNode {
             AstNode::DoublePrecisionFloat(flt)
         }
         Rule::expr => build_ast_from_expr(pair),
-        // Rule::string => {
-        //     let str = &pair.as_str();
-        //     println!("Here is the string: {}", str);
-        //     // Strip leading and ending quotes.
-        //     let str = &str[1..str.len() - 1];
-        //     // Escaped string quotes become single quotes here.
-        //     let str = str.replace("''", "'");
-        //     AstNode::Str(CString::new(&str[..]).unwrap())
-        // }
         Rule::ident => AstNode::Ident(String::from(pair.as_str())),
-
+        Rule::string => {
+            let str = &pair.as_str();
+            // Strip leading and ending quotes.
+            let str = &str[1..str.len() - 1];
+            // Escaped string quotes become single quotes here.
+            let str = str.replace("''", "'");
+            AstNode::Str(CString::new(&str[..]).unwrap())
+        }
         unknown_term => panic!("Unexpected term: {:?}", unknown_term),
     }
 }
 
 fn main() {
     // let unparsed_file = std::fs::read_to_string("+ 1 2").expect("cannot read ijs file");
-    let astnode = parse("matrix =: 2").expect("unsuccessful parse");
+    let astnode = parse("+ 5 (* 2 2)").expect("unsuccessful parse");
+    println!("{:?}", &astnode);
+
+    let astnode = parse("m:=5").expect("unsuccessful parse");
+    println!("{:?}", &astnode);
+
+    let astnode = parse("a:='Apple'").expect("unsuccessful parse");
     println!("{:?}", &astnode);
 }
+

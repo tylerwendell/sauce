@@ -1,33 +1,44 @@
-program = _{ SOI ~ "\n"* ~ (stmt ~ "\n"+) * ~ stmt? ~ EOI }
+lisp = _{SOI ~ "\n"* ~ (stmt ~ "\n"+)* ~ stmt? ~ EOI}
 
-stmt = _{ expr }
+stmt = _{expr}
 
-expr = {
-    string
-    | terms  
-    | assgmtExpr
-    | monadicExpr 
+expr =  {
+    assgmtExpr
+  | monadicExpr
+  | terms
 }
 
-monadicExpr = { verb ~ expr }
+monadicExpr =  {operator ~ expr}
 
-assgmtExpr = { ident ~ "=:" ~ expr }
+assgmtExpr =  {ident ~ ":=" ~ expr}
 
-verb = {
-    ">" | ">=" | "*" | "-"  | "/"
-  | "+"  | "*"  | "<"  |  "<="  | "==" | "^" | "|" | "&"
+terms =  {term+}
+
+term = _{decimal|integer|ident|string|"(" ~ expr ~ ")"}
+
+operator =  {
+    ">"
+  | ">="
+  | "*"
+  | "-"
+  | "/"
+  | "+"
+  | "*"
+  | "<"
+  | "<="
+  | "=="
+  | "^"
+  | "|"
+  | "&"
 }
 
-terms = { term+ }
+integer = @{"_"? ~ ASCII_DIGIT+}
 
-term = _{ decimal | integer | ident |  "(" ~ expr ~ ")" }
+decimal = @{"_"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT*}
 
-decimal = @{ "_"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
+ident = @{ASCII_ALPHA ~ (ASCII_ALPHANUMERIC|"_")*}
 
-integer = @{ "_"? ~ ASCII_DIGIT+ }
+string = @{"'" ~ ("''"|(!"'" ~ ANY))* ~ "'"}
 
-ident = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+WHITESPACE = _{" "|"\t"}
 
-string = @{ "'" ~ ( "''" | (!"'" ~ ANY) )* ~ "'" }
-
-WHITESPACE = _{ " " | "\t" }

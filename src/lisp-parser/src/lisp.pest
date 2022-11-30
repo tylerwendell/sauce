@@ -1,26 +1,45 @@
-// File = {expression / ws+ }
-// FunctionCall = { "(" ws* name ws*
-//   {expression ws* {expression ws*}*}? ")"
-// expression = FunctionCall / Variable / Number
-//   / Text / "(" ws* expression ws* ")" }
-// Variable = { name }
-// Number = { [0-9]+ }
-// Text = { '"' ('\"' / '\\' / [^"])* '"' }
-// name = { [a-zA-Z]+ }
-// ws = { [ \n\t] }
+lisp = _{SOI ~ "\n"* ~ (stmt ~ "\n"+)* ~ stmt? ~ EOI}
 
-WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
-number = @{
-    "-"?
-    ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*)
-    ~ ("." ~ ASCII_DIGIT*)?
-    ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
+stmt = _{expr}
+
+expr =  {
+    assgmtExpr
+  | monadicExpr
+  | terms
 }
-operator = { "+" | "-" | "*" | "/" }
-expr = { number | "(" ~ function ~ ")" }
-function = {operator ~ expr+}
-SAUCY = { 
-  SOI
-    ~ function
-    ~ EOI
-  }
+
+monadicExpr =  {operator ~ expr}
+
+assgmtExpr =  {ident ~ ":=" ~ expr}
+
+terms =  {term+}
+
+term = _{decimal|integer|ident|string|"(" ~ expr ~ ")"}
+
+operator =  {
+    ">"
+  | ">="
+  | "*"
+  | "-"
+  | "/"
+  | "+"
+  | "*"
+  | "<"
+  | "<="
+  | "=="
+  | "!="
+  | "^"
+  | "|"
+  | "&"
+}
+
+integer = @{"_"? ~ ASCII_DIGIT+}
+
+decimal = @{"_"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT*}
+
+ident = @{ASCII_ALPHA ~ (ASCII_ALPHANUMERIC|"_")*}
+
+string = @{"'" ~ ("''"|(!"'" ~ ANY))* ~ "'"}
+
+WHITESPACE = _{" "|"\t"}
+
