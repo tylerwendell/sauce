@@ -21,7 +21,16 @@ fn ui() -> Result<()>  {
         let input = rl.readline(&format!("{}> ", "s".red()));
         match input {
             Ok(line) => {
-                let result = evaluate_input(line.as_str());
+                let skinny = line.trim();
+                if skinny == "" {
+                    continue;
+                }
+                if skinny.to_lowercase() == "q" {
+                    toodles();
+                    break;
+                }
+                rl.add_history_entry::<&str>(line.as_str().as_ref());
+                let result = evaluate_input(skinny);
                 match result {
                     Ok(_) => {
                         println!("Input Processed");
@@ -29,11 +38,6 @@ fn ui() -> Result<()>  {
                     Err(_) => {
                         error!("Error Processing input");
                     }
-                }
-                rl.add_history_entry::<&str>(line.as_str().as_ref());
-                if line.trim().to_lowercase() == "q" {
-                    toodles();
-                    break;
                 }
             }
             Err(ReadlineError::Interrupted) => {
@@ -62,10 +66,7 @@ fn toodles() {
 
 fn evaluate_input(input: &str) -> Result<()>{
     //parse this should be replaced with: https://github.com/pest-parser/pest
-    let words = input.split_whitespace();
-    //execute
-    for word in words {
-        println!("{}", word);
-    }
+    let astnode = lisp_parser::parse(input).expect("unsuccessful parse");
+    println!("{:?}", &astnode);
     Ok(())
 }

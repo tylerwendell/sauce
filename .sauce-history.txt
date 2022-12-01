@@ -13,3 +13,14 @@ as
 test
 test this
 q
++ 3 2
++ 'Apple' (* 2.3 0.1)
+q
+'test'
+q
+'skinny'
+q
+exit
+q
+test
+q
