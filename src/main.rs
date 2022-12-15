@@ -68,5 +68,8 @@ fn evaluate_input(input: &str) -> Result<()>{
     //parse this should be replaced with: https://github.com/pest-parser/pest
     let astnode = lisp_parser::parse(input).expect("unsuccessful parse");
     println!("{:?}", &astnode);
+
+    lisp_parser::evaluate(astnode);
+
     Ok(())
 }

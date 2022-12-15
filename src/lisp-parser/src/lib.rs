@@ -29,9 +29,9 @@ pub enum MonadicVerb {
     And,
 }
 
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum AstNode {
-    Print(Box<AstNode>),
     Integer(i32),
     DoublePrecisionFloat(f64),
     MonadicOp {
@@ -54,7 +54,7 @@ pub fn parse(source: &str) -> Result<Vec<AstNode>, Error<Rule>> {
     for pair in pairs {
         match pair.as_rule() {
             Rule::expr => {
-                ast.push(Print(Box::new(build_ast_from_expr(pair))));
+                ast.push(build_ast_from_expr(pair));
             }
             _ => {}
         }
@@ -169,4 +169,41 @@ fn build_ast_from_term(pair: pest::iterators::Pair<Rule>) -> AstNode {
 //     let astnode = parse("a:='Apple'").expect("unsuccessful parse");
 //     println!("{:?}", &astnode);
 // }
+use std::any::Any;
+pub fn evaluate(ast: Vec<AstNode>) -> Result<Box<dyn Any>, Error<Rule>> {
+    let base = &ast[0];
+    match base{
+        AstNode::MonadicOp { operator, expr } => {
+            // match base.operator {
+            //     GreaterThan=> ,
+            //     GreaterThanEqual=> ,
+            //     Multiplication=> ,
+            //     Difference=>,
+            //     Addition=>,
+            //     Division=>,
+            //     Tally=>,
+            //     LessThan=>,
+            //     LessThanEqual=>,
+            //     Equivalency=>,
+            //     NotEquivalent=>,
+            //     Power=>,
+            //     Or=>,
+            //     And=>,
+            // }
+            println!("1 The first thing is a function with operator: {:#?}", &operator);
+            println!("1 The first thing is a function and parameters: {:?}", expr);
+        },
+        AstNode::IsGlobal { ident, expr } => {
+            println!("1 The first thing is assignment with var name: {:#?}", ident);
+            println!("1 The first thing is assignment and value: {:#?}", expr);
+        },
+        Integer(_) => todo!(),
+        DoublePrecisionFloat(_) => todo!(),
+        Terms(_) => todo!(),
+        Ident(_) => todo!(),
+        Str(_) => todo!(),
 
+    }
+ 
+    Ok(Box::new("Done"))
+}
