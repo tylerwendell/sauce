@@ -5,16 +5,16 @@ stmt = _{expr}
 expr =  {
     assgmtExpr
   | monadicExpr
+  | terms
 }
 
-monadicExpr =  {operator ~ (monadicExpr | terms)}
+monadicExpr =  {operator ~ (expr | terms)}
 
-
-assgmtExpr =  {ident ~ ":=" ~ (terms)}
+assgmtExpr =  {ident ~ ":=" ~ (expr | terms)}
 
 terms =  {term+}
 
-term = _{decimal|integer|ident|string|"(" ~ (monadicExpr | terms) ~ ")"}
+term = _{decimal|integer|ident|string|"(" ~ (expr | terms) ~ ")"}
 
 operator =  {
     ">"

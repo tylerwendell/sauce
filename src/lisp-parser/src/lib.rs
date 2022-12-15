@@ -44,7 +44,7 @@ pub enum AstNode {
         expr: Box<AstNode>,
     },
     Ident(String),
-    Str(CString),
+    Str(String),
 }
 
 pub fn parse(source: &str) -> Result<Vec<AstNode>, Error<Rule>> {
@@ -147,12 +147,12 @@ fn build_ast_from_term(pair: pest::iterators::Pair<Rule>) -> AstNode {
         Rule::expr => build_ast_from_expr(pair),
         Rule::ident => AstNode::Ident(String::from(pair.as_str())),
         Rule::string => {
-            let str = &pair.as_str();
+            let s = &pair.as_str();
             // Strip leading and ending quotes.
-            let str = &str[1..str.len() - 1];
+            let s = &s[1..s.len() - 1];
             // Escaped string quotes become single quotes here.
-            let str = str.replace("''", "'");
-            AstNode::Str(CString::new(&str[..]).unwrap())
+            let s = s.replace("''", "'");
+            AstNode::Str(s)
         }
         unknown_term => panic!("Unexpected term: {:?}", unknown_term),
     }
@@ -169,10 +169,10 @@ fn build_ast_from_term(pair: pest::iterators::Pair<Rule>) -> AstNode {
 //     let astnode = parse("a:='Apple'").expect("unsuccessful parse");
 //     println!("{:?}", &astnode);
 // }
-use std::any::Any;
-pub fn evaluate(ast: Vec<AstNode>) -> Result<Box<dyn Any>, Error<Rule>> {
-    let base = &ast[0];
-    match base{
+
+pub fn evaluate(ast: Vec<AstNode>) -> Result<AstNode, Error<Rule>> {
+    let peel = ast[0].clone();
+    match peel {
         AstNode::MonadicOp { operator, expr } => {
             // match base.operator {
             //     GreaterThan=> ,
@@ -190,20 +190,31 @@ pub fn evaluate(ast: Vec<AstNode>) -> Result<Box<dyn Any>, Error<Rule>> {
             //     Or=>,
             //     And=>,
             // }
-            println!("1 The first thing is a function with operator: {:#?}", &operator);
+            println!("1 The first thing is a function with operator: {:#?}", operator);
+
             println!("1 The first thing is a function and parameters: {:?}", expr);
+            let mut expV  = vec![];
+            expV.push(*expr);
+            let ans = evaluate(expV);
+            println!("1 The first thing is assignment and value: {:?}", ans.unwrap());
+            Ok(Str("todo".to_string()))
         },
         AstNode::IsGlobal { ident, expr } => {
             println!("1 The first thing is assignment with var name: {:#?}", ident);
-            println!("1 The first thing is assignment and value: {:#?}", expr);
+            let mut expV  = vec![];
+            expV.push(*expr);
+            let ans = evaluate(expV);
+            println!("1 The first thing is assignment and value: {:?}", ans.unwrap());
+            Ok(Str("todo".to_string()))
         },
-        Integer(_) => todo!(),
-        DoublePrecisionFloat(_) => todo!(),
-        Terms(_) => todo!(),
-        Ident(_) => todo!(),
-        Str(_) => todo!(),
+        Integer(i) => {
+            Ok(Integer(i))
+        },
+        DoublePrecisionFloat(f) => Ok(DoublePrecisionFloat(f)),
+        Terms(t) => Ok(Terms(t)),
+        Ident(v) => Ok(Str(v)),
+        Str(s) => Ok(Str(s)),
 
     }
  
-    Ok(Box::new("Done"))
 }
