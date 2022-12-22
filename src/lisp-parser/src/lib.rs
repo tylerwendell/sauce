@@ -28,35 +28,12 @@ pub enum MonadicVerb {
     And,
 }
 
-#[derive(PartialEq, Debug, Clone)]
-pub enum Primative {
-    Integer(i32),
-    DoublePrecisionFloat(f64),
-    Str(String),
-}
-
-use std::ops::Add;
-impl Add for Primative {
-	type Output = Primative;
-
-    fn add(self, other: Primative) -> Primative {
-        match (self, other) {
-            (Primative::Integer(x), Primative::Integer(y)) => Primative::Integer(x + y),
-            (Primative::DoublePrecisionFloat(x), Primative::DoublePrecisionFloat(y)) => Primative::DoublePrecisionFloat(x + y),
-            (Primative::Str(x), Primative::Str(y)) => Primative::Str(x + &y),
-            (Primative::Integer(x), Primative::DoublePrecisionFloat(y)) => Primative::DoublePrecisionFloat(x as f64 + y),
-            (Primative::DoublePrecisionFloat(x), Primative::Integer(y)) => Primative::DoublePrecisionFloat(x + y as f64),
-            (Primative::Integer(x), Primative::Str(y)) => Primative::Str(format!("{}{}", x, y)),
-            (Primative::Str(x), Primative::Integer(y)) => Primative::Str(format!("{}{}", x, y)),
-            (Primative::DoublePrecisionFloat(x), Primative::Str(y)) => Primative::Str(format!("{}{}", x, y)),
-            (Primative::Str(x), Primative::DoublePrecisionFloat(y)) => Primative::Str(format!("{}{}", x, y)),
-    }
-    }
-}
+use operators::Primitive;
+mod operators;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum AstNode {
-    Value(Primative),
+    Value(Primitive),
     MonadicOp {
         operator: MonadicVerb,
         expr: Box<AstNode>,
@@ -162,7 +139,7 @@ fn build_ast_from_values(pair: pest::iterators::Pair<Rule>) -> AstNode {
                 _ => (1, &istr[..]),
             };
             let integer: i32 = istr.parse().unwrap();
-            Value(Primative::Integer(sign * integer))
+            Value(Primitive::Integer(sign * integer))
         }
         Rule::decimal => {
             let dstr = pair.as_str();
@@ -175,7 +152,7 @@ fn build_ast_from_values(pair: pest::iterators::Pair<Rule>) -> AstNode {
                 // Avoid negative zeroes; only multiply sign by nonzeroes.
                 flt *= sign;
             }
-            Value(Primative::DoublePrecisionFloat(flt))
+            Value(Primitive::DoublePrecisionFloat(flt))
         }
         Rule::string => {
             let s = &pair.as_str();
@@ -184,7 +161,7 @@ fn build_ast_from_values(pair: pest::iterators::Pair<Rule>) -> AstNode {
             // Escaped string quotes become single quotes here.
             println!("this is the value: _{:?}_", pair.as_rule());
             let s = s.replace("''", "'");
-            Value(Primative::Str(s))
+            Value(Primitive::Str(s))
         }
         unknown_term => {
             panic!("Unexpected term: {:?}", unknown_term)
