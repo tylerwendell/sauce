@@ -2,11 +2,7 @@ lisp = _{SOI ~ "\n"* ~ (stmt ~ "\n"+)* ~ stmt? ~ EOI}
 
 stmt = _{expr}
 
-expr =  {
-    assgmtExpr
-  | monadicExpr
-  | terms
-}
+expr =  { assgmtExpr | monadicExpr | terms }
 
 monadicExpr =  {operator ~ (expr | terms)}
 
@@ -14,7 +10,7 @@ assgmtExpr =  {ident ~ ":=" ~ (expr | terms)}
 
 terms =  {term+}
 
-term = _{decimal|integer|ident|string|"(" ~ (expr | terms) ~ ")"}
+term = _{value|ident|"(" ~ (expr | terms) ~ ")"}
 
 operator =  {
     ">"
@@ -33,13 +29,15 @@ operator =  {
   | "&"
 }
 
+value = {decimal|integer|string}
+
 integer = @{"_"? ~ ASCII_DIGIT+}
 
 decimal = @{"_"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT*}
 
 ident = @{ASCII_ALPHA ~ (ASCII_ALPHANUMERIC|"_")*}
 
-string = @{"'" ~ ("''"|(!"'" ~ ANY))* ~ "'"}
+string = @{ "'" ~ ("''"|(!"'" ~ ANY))* ~ "'" }
 
 WHITESPACE = _{" "|"\t"}
 

@@ -69,7 +69,7 @@ fn evaluate_input(input: &str) -> Result<()>{
     let astnode = lisp_parser::parse(input).expect("unsuccessful parse");
     println!("{:?}", &astnode);
 
-    lisp_parser::evaluate(astnode);
+    // lisp_parser::evaluate(astnode);
 
     Ok(())
 }

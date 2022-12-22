@@ -5,7 +5,6 @@ extern crate pest_derive;
 use self::AstNode::*;
 use pest::error::Error;
 use pest::Parser;
-use std::ffi::CString;
 
 #[derive(Parser)]
 #[grammar = "lisp.pest"]
@@ -29,11 +28,35 @@ pub enum MonadicVerb {
     And,
 }
 
+#[derive(PartialEq, Debug, Clone)]
+pub enum Primative {
+    Integer(i32),
+    DoublePrecisionFloat(f64),
+    Str(String),
+}
+
+use std::ops::Add;
+impl Add for Primative {
+	type Output = Primative;
+
+    fn add(self, other: Primative) -> Primative {
+        match (self, other) {
+            (Primative::Integer(x), Primative::Integer(y)) => Primative::Integer(x + y),
+            (Primative::DoublePrecisionFloat(x), Primative::DoublePrecisionFloat(y)) => Primative::DoublePrecisionFloat(x + y),
+            (Primative::Str(x), Primative::Str(y)) => Primative::Str(x + &y),
+            (Primative::Integer(x), Primative::DoublePrecisionFloat(y)) => Primative::DoublePrecisionFloat(x as f64 + y),
+            (Primative::DoublePrecisionFloat(x), Primative::Integer(y)) => Primative::DoublePrecisionFloat(x + y as f64),
+            (Primative::Integer(x), Primative::Str(y)) => Primative::Str(format!("{}{}", x, y)),
+            (Primative::Str(x), Primative::Integer(y)) => Primative::Str(format!("{}{}", x, y)),
+            (Primative::DoublePrecisionFloat(x), Primative::Str(y)) => Primative::Str(format!("{}{}", x, y)),
+            (Primative::Str(x), Primative::DoublePrecisionFloat(y)) => Primative::Str(format!("{}{}", x, y)),
+    }
+    }
+}
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum AstNode {
-    Integer(i32),
-    DoublePrecisionFloat(f64),
+    Value(Primative),
     MonadicOp {
         operator: MonadicVerb,
         expr: Box<AstNode>,
@@ -44,8 +67,9 @@ pub enum AstNode {
         expr: Box<AstNode>,
     },
     Ident(String),
-    Str(String),
 }
+
+
 
 pub fn parse(source: &str) -> Result<Vec<AstNode>, Error<Rule>> {
     let mut ast = vec![];
@@ -122,6 +146,15 @@ fn parse_monadic_verb(pair: pest::iterators::Pair<Rule>, expr: AstNode) -> AstNo
 
 fn build_ast_from_term(pair: pest::iterators::Pair<Rule>) -> AstNode {
     match pair.as_rule() {
+        Rule::value => build_ast_from_values(pair.into_inner().next().unwrap()),
+        Rule::expr => build_ast_from_expr(pair),
+        Rule::ident => AstNode::Ident(String::from(pair.as_str())),
+        unknown_term => panic!("Unexpected term: {:?}", unknown_term),
+    }
+}
+
+fn build_ast_from_values(pair: pest::iterators::Pair<Rule>) -> AstNode {
+    match pair.as_rule() {
         Rule::integer => {
             let istr = pair.as_str();
             let (sign, istr) = match &istr[..1] {
@@ -129,7 +162,7 @@ fn build_ast_from_term(pair: pest::iterators::Pair<Rule>) -> AstNode {
                 _ => (1, &istr[..]),
             };
             let integer: i32 = istr.parse().unwrap();
-            AstNode::Integer(sign * integer)
+            Value(Primative::Integer(sign * integer))
         }
         Rule::decimal => {
             let dstr = pair.as_str();
@@ -142,19 +175,20 @@ fn build_ast_from_term(pair: pest::iterators::Pair<Rule>) -> AstNode {
                 // Avoid negative zeroes; only multiply sign by nonzeroes.
                 flt *= sign;
             }
-            AstNode::DoublePrecisionFloat(flt)
+            Value(Primative::DoublePrecisionFloat(flt))
         }
-        Rule::expr => build_ast_from_expr(pair),
-        Rule::ident => AstNode::Ident(String::from(pair.as_str())),
         Rule::string => {
             let s = &pair.as_str();
             // Strip leading and ending quotes.
             let s = &s[1..s.len() - 1];
             // Escaped string quotes become single quotes here.
+            println!("this is the value: _{:?}_", pair.as_rule());
             let s = s.replace("''", "'");
-            AstNode::Str(s)
+            Value(Primative::Str(s))
         }
-        unknown_term => panic!("Unexpected term: {:?}", unknown_term),
+        unknown_term => {
+            panic!("Unexpected term: {:?}", unknown_term)
+        },
     }
 }
 
@@ -170,51 +204,60 @@ fn build_ast_from_term(pair: pest::iterators::Pair<Rule>) -> AstNode {
 //     println!("{:?}", &astnode);
 // }
 
-pub fn evaluate(ast: Vec<AstNode>) -> Result<AstNode, Error<Rule>> {
-    let peel = ast[0].clone();
-    match peel {
-        AstNode::MonadicOp { operator, expr } => {
-            // match base.operator {
-            //     GreaterThan=> ,
-            //     GreaterThanEqual=> ,
-            //     Multiplication=> ,
-            //     Difference=>,
-            //     Addition=>,
-            //     Division=>,
-            //     Tally=>,
-            //     LessThan=>,
-            //     LessThanEqual=>,
-            //     Equivalency=>,
-            //     NotEquivalent=>,
-            //     Power=>,
-            //     Or=>,
-            //     And=>,
-            // }
-            println!("1 The first thing is a function with operator: {:#?}", operator);
+// pub fn evaluate(ast: Vec<AstNode>) -> Result<AstNode, Error<Rule>> {
+//     let peel = ast[0].clone();
+//     match peel {
+//         AstNode::MonadicOp { operator, expr } => {
+//             // match base.operator {
+//             //     GreaterThan=> ,
+//             //     GreaterThanEqual=> ,
+//             //     Multiplication=> ,
+//             //     Difference=>,
+//             //     Addition=>,
+//             //     Division=>,
+//             //     Tally=>,
+//             //     LessThan=>,
+//             //     LessThanEqual=>,
+//             //     Equivalency=>,
+//             //     NotEquivalent=>,
+//             //     Power=>,
+//             //     Or=>,
+//             //     And=>,
+//             // }
+//             println!("1 The first thing is a function with operator: {:#?}", operator);
 
-            println!("1 The first thing is a function and parameters: {:?}", expr);
-            let mut expV  = vec![];
-            expV.push(*expr);
-            let ans = evaluate(expV);
-            println!("1 The first thing is assignment and value: {:?}", ans.unwrap());
-            Ok(Str("todo".to_string()))
-        },
-        AstNode::IsGlobal { ident, expr } => {
-            println!("1 The first thing is assignment with var name: {:#?}", ident);
-            let mut expV  = vec![];
-            expV.push(*expr);
-            let ans = evaluate(expV);
-            println!("1 The first thing is assignment and value: {:?}", ans.unwrap());
-            Ok(Str("todo".to_string()))
-        },
-        Integer(i) => {
-            Ok(Integer(i))
-        },
-        DoublePrecisionFloat(f) => Ok(DoublePrecisionFloat(f)),
-        Terms(t) => Ok(Terms(t)),
-        Ident(v) => Ok(Str(v)),
-        Str(s) => Ok(Str(s)),
+//             println!("1 The first thing is a function and parameters: {:?}", expr);
+//             let mut expV  = vec![];
+//             expV.push(*expr);
+//             let ans = evaluate(expV);
+//             println!("1 The first thing is assignment and value: {:?}", ans.unwrap());
+//             Ok(Str("todo".to_string()))
+//         },
+//         AstNode::IsGlobal { ident, expr } => {
+//             println!("1 The first thing is assignment with var name: {:#?}", ident);
+//             let mut expV  = vec![];
+//             expV.push(*expr);
+//             let ans = evaluate(expV);
+//             println!("1 The first thing is assignment and value: {:?}", ans.unwrap());
+//             Ok(Str("todo".to_string()))
+//         },
+//         Integer(i) => {
+//             Ok(Integer(i))
+//         },
+//         DoublePrecisionFloat(f) => Ok(DoublePrecisionFloat(f)),
+//         Terms(t) => Ok(Terms(t)),
+//         Ident(v) => Ok(Str(v)),
+//         Str(s) => Ok(Str(s)),
 
-    }
+//     }
  
-}
+// }
+
+
+// fn addition<T>(ast: Vec<AstNode>) -> Result<T, Error<Rule>> {
+//     let sum: Vec<T> = Vec::new();
+//     for item in ast{
+//         sum.push(item)
+//     }
+//     Ok()
+// }
