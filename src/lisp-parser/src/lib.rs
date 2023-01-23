@@ -5,6 +5,8 @@ extern crate pest_derive;
 use self::AstNode::*;
 use pest::error::Error;
 use pest::Parser;
+use std::collections::HashMap;
+use std::ops::Deref;
 
 #[derive(Parser)]
 #[grammar = "lisp.pest"]
@@ -181,54 +183,60 @@ fn build_ast_from_values(pair: pest::iterators::Pair<Rule>) -> AstNode {
 //     println!("{:?}", &astnode);
 // }
 
-// pub fn evaluate(ast: Vec<AstNode>) -> Result<AstNode, Error<Rule>> {
-//     let peel = ast[0].clone();
-//     match peel {
-//         AstNode::MonadicOp { operator, expr } => {
-//             // match base.operator {
-//             //     GreaterThan=> ,
-//             //     GreaterThanEqual=> ,
-//             //     Multiplication=> ,
-//             //     Difference=>,
-//             //     Addition=>,
-//             //     Division=>,
-//             //     Tally=>,
-//             //     LessThan=>,
-//             //     LessThanEqual=>,
-//             //     Equivalency=>,
-//             //     NotEquivalent=>,
-//             //     Power=>,
-//             //     Or=>,
-//             //     And=>,
-//             // }
-//             println!("1 The first thing is a function with operator: {:#?}", operator);
 
-//             println!("1 The first thing is a function and parameters: {:?}", expr);
-//             let mut expV  = vec![];
-//             expV.push(*expr);
-//             let ans = evaluate(expV);
-//             println!("1 The first thing is assignment and value: {:?}", ans.unwrap());
-//             Ok(Str("todo".to_string()))
-//         },
-//         AstNode::IsGlobal { ident, expr } => {
-//             println!("1 The first thing is assignment with var name: {:#?}", ident);
-//             let mut expV  = vec![];
-//             expV.push(*expr);
-//             let ans = evaluate(expV);
-//             println!("1 The first thing is assignment and value: {:?}", ans.unwrap());
-//             Ok(Str("todo".to_string()))
-//         },
-//         Integer(i) => {
-//             Ok(Integer(i))
-//         },
-//         DoublePrecisionFloat(f) => Ok(DoublePrecisionFloat(f)),
-//         Terms(t) => Ok(Terms(t)),
-//         Ident(v) => Ok(Str(v)),
-//         Str(s) => Ok(Str(s)),
 
-//     }
+pub fn evaluate(ast: Vec<AstNode>, saucy_vars: &mut HashMap<String, AstNode>) -> Result<AstNode, Error<Rule>> {
+    let peel = ast[0].clone();
+    match peel {
+        AstNode::MonadicOp { operator, expr } => {
+            // match base.operator {
+            //     GreaterThan=> ,
+            //     GreaterThanEqual=> ,
+            //     Multiplication=> ,
+            //     Difference=>,
+            //     Addition=>,
+            //     Division=>,
+            //     Tally=>,
+            //     LessThan=>,
+            //     LessThanEqual=>,
+            //     Equivalency=>,
+            //     NotEquivalent=>,
+            //     Power=>,
+            //     Or=>,
+            //     And=>,
+            // }
+            println!("1 The first thing is a function with operator: {:#?}", operator);
+
+            println!("1 The first thing is a function and parameters: {:?}", expr);
+            let mut expV  = vec![];
+            expV.push(*expr);
+            let ans = evaluate(expV, saucy_vars);
+            println!("1 The first thing is assignment and value: {:?}", ans.unwrap());
+            Ok(Value(Primitive::Str("todo MonadicOp".to_string())))
+        },
+        AstNode::IsGlobal { ident, expr } => {
+            // println!("1 The first thing is assignment with var name: {:#?}", ident);
+            // let mut expV  = vec![];
+            // expV.push(*expr);
+            // let ans = evaluate(expV, saucy_vars);
+            // println!("1 The first thing is assignment and value: {:?}", ans.unwrap());
+            saucy_vars.insert(ident, *expr);
+            Ok(Value(Primitive::Str("todo isGlobal".to_string())))
+        },
+        Value(Primitive::Integer(i)) => {
+            Ok(Value(Primitive::Integer(i)))
+        },
+        Value(Primitive::DoublePrecisionFloat(f)) => Ok(Value(Primitive::DoublePrecisionFloat(f))),
+        Terms(t) => Ok(Terms(t)),
+        Ident(v) => {
+            let v = saucy_vars.get(&v).unwrap();
+            Ok(v.clone())
+        },
+        Value(Primitive::Str(s)) => Ok(Value(Primitive::Str(s))),
+        Value(Primitive::Vector(_)) => Ok(Value(Primitive::Str("todo Vector".to_string()))),
+    }
  
-// }
+}
 
 
 // fn addition<T>(ast: Vec<AstNode>) -> Result<T, Error<Rule>> {

@@ -1,7 +1,9 @@
+use lisp_parser::AstNode;
 use rustyline::error::ReadlineError;
 use rustyline::{Editor, Result};
 use colored::Colorize;
 use tracing::{warn, info, error};
+use std::collections::HashMap;
 
 
 fn main() {
@@ -16,6 +18,7 @@ fn ui() -> Result<()>  {
     if rl.load_history("./.sauce-history.txt").is_err() {
         println!("No history found.");
     }
+    let mut saucy_var: HashMap<String, AstNode> = HashMap::new();
 
     loop {
         let input = rl.readline(&format!("{}> ", "s".red()));
@@ -30,7 +33,7 @@ fn ui() -> Result<()>  {
                     break;
                 }
                 rl.add_history_entry::<&str>(line.as_str().as_ref());
-                let result = evaluate_input(skinny);
+                let result = evaluate_input(skinny, &mut saucy_var);
                 match result {
                     Ok(_) => {
                         println!("Input Processed");
@@ -64,12 +67,14 @@ fn toodles() {
     println!("Have a {} Day", "Saucy".red())
 }
 
-fn evaluate_input(input: &str) -> Result<()>{
+fn evaluate_input(input: &str, saucy_vars: &mut HashMap<String, AstNode>) -> Result<()>{
     //parse this should be replaced with: https://github.com/pest-parser/pest
     let astnode = lisp_parser::parse(input).expect("unsuccessful parse");
     println!("{:?}", &astnode);
 
-    // lisp_parser::evaluate(astnode);
+    println!("Evaluating...");
+    let value =lisp_parser::evaluate(astnode, saucy_vars);
+    println!("Evaluation: {:?}", value);
 
     Ok(())
 }
