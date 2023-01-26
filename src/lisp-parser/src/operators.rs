@@ -8,6 +8,26 @@ pub enum Primitive {
     Str(String),
     Vector(Vec<Primitive>),
 }
+impl std::fmt::Display for Primitive {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Primitive::Integer(item) => write!(f, "{}", item),
+            Primitive::DoublePrecisionFloat(item) => write!(f, "{}", item),
+            Primitive::Str(item) => write!(f, "\'{}\'", item),
+            Primitive::Vector(item) => {
+                write!(f, "[")?;
+                for (i, e) in item.iter().enumerate() {
+                    if i != 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", e)?;
+                }
+                write!(f, "]")
+            },
+        }
+    }
+}
+
 
 use std::ops;
 

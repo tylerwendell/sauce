@@ -73,8 +73,8 @@ fn evaluate_input(input: &str, saucy_vars: &mut HashMap<String, AstNode>) -> Res
     println!("{:?}", &astnode);
 
     println!("Evaluating...");
-    let value =lisp_parser::evaluate(astnode, saucy_vars);
-    println!("Evaluation: {:?}", value);
+    let value =lisp_parser::evaluate(astnode, saucy_vars).expect("unsuccessful evaluation");
+    println!("Evaluation: {}", value);
 
     Ok(())
 }
